@@ -118,8 +118,9 @@ worth a closer look:
   other reviews in the export (compared case-insensitively
   with whitespace collapsed), which looks like copied or
   fake reviews.
-* `author-burst`: a reviewer email with four or more
-  reviews in the export, which looks like a review burst
+* `author-burst`: a reviewer email with at least
+  `--fake-author-count` reviews (default 4) in the export,
+  which looks like a review burst
   from one author. Email matching is case-insensitive.
 * `few-reviews`: a product with fewer than `--min-reviews`
   (default 5) reviews, so shoppers have little social
@@ -333,11 +334,21 @@ warnings-only file:
 | --- | --- |
 | `--reply-days` | A negative review unanswered more than this many days is overdue, and a pending review older than this is overdue for moderation (default: 7) |
 | `--min-reviews` | A product with fewer reviews than this has too few reviews (default: 5) |
+| `--fake-author-count` | Minimum reviews from one email to flag an author burst; a positive integer (default: 4) |
 | `--as-of` | Date to compare timestamps against, for example 2026-11-18 (default: now) |
 | `--json` | Emit JSON instead of text |
 | `--check` | Exit 1 if any error is found |
 | `--strict` | With --check, also exit 1 on warnings |
 | `--out` | Write the report to a file |
+
+For example, use `--fake-author-count 3` to flag an author
+with three or more reviews:
+
+```bash
+python3 woo_review_doctor.py examples/reviews.csv --as-of 2026-11-18 --fake-author-count 3
+```
+
+Omitting the flag keeps the threshold at four reviews.
 
 ## Edge cases
 
@@ -378,7 +389,7 @@ warnings-only file:
 python3 -m unittest discover -s tests -v
 ```
 
-75 tests, all passing: timestamp and rating parsing,
+78 tests, all passing: timestamp and rating parsing,
 replied value parsing, header aliases and BOM handling,
 malformed rows, duplicate and missing review ids, missing
 product ids, invalid ratings and timestamps, future
@@ -388,8 +399,9 @@ staying clean, pending moderation rules, thin low ratings,
 identical-text matching, author bursts, few-reviews
 thresholds, summary totals and per-product distributions,
 text and JSON output, `--out` file output, `--reply-days`
-and `--min-reviews` flags, and `--check` and `--strict`
-exit codes. The same 75 tests pass under pytest.
+and `--min-reviews` flags, configurable `--fake-author-count`
+and its input validation, and `--check` and `--strict`
+exit codes.
 
 ## License
 
