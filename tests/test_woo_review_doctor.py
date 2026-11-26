@@ -6,7 +6,7 @@ import os
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(
@@ -609,6 +609,45 @@ class TestOutput(unittest.TestCase):
     def test_bad_reply_days(self):
         code, _ = run_cli(["examples/clean.csv", "--reply-days", "-1"])
         self.assertEqual(code, 2)
+
+    def test_fake_author_count_flag(self):
+        body = HEADER + "".join(
+            row(review_id="R-%d" % i, text="Unique review number %d" % i)
+            for i in range(3))
+        path = write_csv(body)
+        try:
+            for options, expected in (([], 0),
+                                      (["--fake-author-count", "3"], 3),
+                                      (["--fake-author-count", "4"], 0)):
+                with self.subTest(options=options):
+                    code, text = run_cli(
+                        [path, "--as-of", "2026-11-18", "--min-reviews",
+                         "1", "--json", "--check", "--strict"] + options)
+                    report = json.loads(text)
+                    bursts = [item for item in report["findings"]
+                              if item["rule"] == "author-burst"]
+                    self.assertEqual(len(bursts), expected)
+                    self.assertEqual(report["fake_pattern_findings"], expected)
+                    self.assertEqual(code, 1 if expected else 0)
+        finally:
+            os.unlink(path)
+
+    def test_bad_fake_author_count(self):
+        for value in ("0", "-1"):
+            with self.subTest(value=value), redirect_stderr(io.StringIO()) as err:
+                code, text = run_cli(["examples/clean.csv",
+                                      "--fake-author-count", value])
+                self.assertEqual(code, 2)
+                self.assertEqual(text, "")
+                self.assertIn("--fake-author-count must be at least 1",
+                              err.getvalue())
+
+    def test_non_integer_fake_author_count(self):
+        with redirect_stderr(io.StringIO()) as err:
+            with self.assertRaises(SystemExit) as exc:
+                run_cli(["examples/clean.csv", "--fake-author-count", "2.5"])
+        self.assertEqual(exc.exception.code, 2)
+        self.assertIn("invalid int value", err.getvalue())
 
     def test_bad_min_reviews(self):
         code, _ = run_cli(["examples/clean.csv", "--min-reviews", "-1"])

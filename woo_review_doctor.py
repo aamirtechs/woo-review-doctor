@@ -532,6 +532,11 @@ def build_parser():
                         help="a product with fewer reviews than "
                         "this has too few reviews "
                         "(default: %d)" % DEFAULT_MIN_REVIEWS)
+    parser.add_argument("--fake-author-count", type=int,
+                        default=DEFAULT_FAKE_AUTHOR_COUNT,
+                        help="minimum reviews from one email to "
+                        "flag an author burst (at least 1, "
+                        "default: %d)" % DEFAULT_FAKE_AUTHOR_COUNT)
     parser.add_argument("--as-of", default=None,
                         help="date to compare timestamps against, "
                         "for example 2026-11-18 (default: now)")
@@ -557,6 +562,10 @@ def main(argv=None):
         print("error: --min-reviews must be at least 0",
               file=sys.stderr)
         return 2
+    if args.fake_author_count < 1:
+        print("error: --fake-author-count must be at least 1",
+              file=sys.stderr)
+        return 2
     if args.as_of is None:
         as_of = datetime.now(timezone.utc)
     else:
@@ -572,7 +581,8 @@ def main(argv=None):
         return 2
     findings.extend(audit(reviews, as_of,
                           reply_days=args.reply_days,
-                          min_reviews=args.min_reviews))
+                          min_reviews=args.min_reviews,
+                          fake_author_count=args.fake_author_count))
     summary = summarize(reviews, findings, as_of,
                         reply_days=args.reply_days,
                         min_reviews=args.min_reviews)
