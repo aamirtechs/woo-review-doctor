@@ -469,7 +469,26 @@ def summarize(reviews, findings, as_of,
             "per_product": per_product}
 
 
-def render_text(reviews, findings, summary):
+def lowest_rated_product(per_product, min_reviews=DEFAULT_MIN_REVIEWS):
+    """Return the lowest rated per-product row, or None.
+
+    Only products with at least min_reviews reviews and at least
+    one valid rating are considered. Ties on the average rating
+    go to the product id that sorts first. Returns None when no
+    product qualifies.
+    """
+    candidates = [row for row in per_product
+                  if row["reviews"] >= min_reviews
+                  and sum(row["distribution"].values()) > 0]
+    if not candidates:
+        return None
+    return min(candidates,
+               key=lambda row: (row["average_rating"],
+                                row["product_id"]))
+
+
+def render_text(reviews, findings, summary,
+                min_reviews=DEFAULT_MIN_REVIEWS):
     """Render the text report."""
     lines = [str(item) for item in findings]
     lines.append("")
@@ -486,6 +505,13 @@ def render_text(reviews, findings, summary):
                  "%(fake_pattern_findings)d, products with too "
                  "few reviews: %(products_with_few_reviews)d"
                  % summary)
+    lowest = lowest_rated_product(summary["per_product"], min_reviews)
+    if lowest is not None:
+        lines.append("Lowest rated product with at least %d "
+                     "reviews: %s %s, avg %.2f from %d reviews"
+                     % (min_reviews, lowest["product_id"],
+                        lowest["product_name"] or "(no name)",
+                        lowest["average_rating"], lowest["reviews"]))
     lines.append("")
     lines.append("Per-product rating summary:")
     for row in summary["per_product"]:
@@ -579,7 +605,8 @@ def main(argv=None):
     if args.json:
         report = render_json(reviews, findings, summary)
     else:
-        report = render_text(reviews, findings, summary)
+        report = render_text(reviews, findings, summary,
+                             min_reviews=args.min_reviews)
     if args.out is not None:
         try:
             with open(args.out, "w", encoding="utf-8") as handle:

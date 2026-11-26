@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+* The text summary names the lowest rated product among
+  products with at least `--min-reviews` reviews (product
+  id, name, average rating, review count). The line is
+  omitted when no product reaches the minimum, and the
+  JSON output is unchanged.
+
 ## 1.0.0 - 2026-11-20
 
 Initial release.

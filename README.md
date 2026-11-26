@@ -128,7 +128,10 @@ worth a closer look:
 The summary reports the average rating, the unreplied
 negative count (with the overdue count), the pending
 moderation overdue count, the fake-review pattern finding
-count, the count of products with too few reviews, and a
+count, the count of products with too few reviews, the
+lowest rated product among those with at least
+`--min-reviews` reviews (omitted when no product reaches
+the minimum, and not part of the `--json` output), and a
 per-product table with the review count, average rating,
 1 to 5 star distribution, and unreplied negative count.
 
@@ -211,7 +214,10 @@ reviewers pasted the same "Warm and soft." text, and two
 more pairs share identical text), and all 9 products below
 the 5 review minimum. The worst product is the Linen
 Cushion Cover at an average of 1.00 with 3 unreplied
-negative reviews, so it is the first product to fix.
+negative reviews, so it is the first product to fix. No
+product reaches the 5 review minimum, so the lowest rated
+product line is omitted; with `--min-reviews 3` it names
+the Linen Cushion Cover.
 
 Use it as a CI gate: `--check` exits 1 when any error is
 found, and 0 otherwise. On the sample above it exits 1:
@@ -227,6 +233,7 @@ product, it exits 0:
 Reviews: 5, findings: 0, errors: 0, warnings: 0
 Average rating: 4.60, unreplied negative reviews: 0 (0 overdue), pending moderation overdue: 0
 Fake-review pattern findings: 0, products with too few reviews: 0
+Lowest rated product with at least 5 reviews: P-301 Wool Throw Blanket, avg 4.60 from 5 reviews
 
 Per-product rating summary:
 P-301 Wool Throw Blanket: 5 reviews, avg 4.60, 5:3 4:2 3:0 2:0 1:0, unreplied negatives: 0
@@ -253,6 +260,7 @@ WARNING [unreplied-negative] R-401: negative review (rating 1) has no owner repl
 Reviews: 2, findings: 1, errors: 0, warnings: 1
 Average rating: 3.00, unreplied negative reviews: 1 (0 overdue), pending moderation overdue: 0
 Fake-review pattern findings: 0, products with too few reviews: 0
+Lowest rated product with at least 2 reviews: P-401 Cotton Tote Bag, avg 3.00 from 2 reviews
 
 Per-product rating summary:
 P-401 Cotton Tote Bag: 2 reviews, avg 3.00, 5:1 4:0 3:0 2:0 1:1, unreplied negatives: 1

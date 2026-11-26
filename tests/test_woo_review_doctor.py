@@ -515,6 +515,23 @@ class TestSummarize(unittest.TestCase):
         self.assertEqual(summary["findings"], 0)
         self.assertEqual(summary["average_rating"], 4.6)
 
+    def test_lowest_rated_product_helper(self):
+        per_product = [
+            {"product_id": "P-1", "reviews": 5, "average_rating": 2.0,
+             "distribution": {"1": 0, "2": 5, "3": 0, "4": 0, "5": 0}},
+            {"product_id": "P-2", "reviews": 4, "average_rating": 1.0,
+             "distribution": {"1": 4, "2": 0, "3": 0, "4": 0, "5": 0}},
+            {"product_id": "P-3", "reviews": 6, "average_rating": 0.0,
+             "distribution": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}},
+            {"product_id": "P-0", "reviews": 5, "average_rating": 2.0,
+             "distribution": {"1": 0, "2": 5, "3": 0, "4": 0, "5": 0}}]
+        lowest = doctor.lowest_rated_product(per_product, 5)
+        self.assertEqual(lowest["product_id"], "P-0")
+        lowest = doctor.lowest_rated_product(per_product, 4)
+        self.assertEqual(lowest["product_id"], "P-2")
+        self.assertIsNone(doctor.lowest_rated_product(per_product, 7))
+        self.assertIsNone(doctor.lowest_rated_product([], 0))
+
 
 class TestOutput(unittest.TestCase):
     def test_text_output_sample(self):
@@ -605,6 +622,64 @@ class TestOutput(unittest.TestCase):
         code, _ = run_cli([path, "--as-of", "2026-11-18",
                            "--reply-days", "0", "--check"])
         self.assertEqual(code, 1)
+
+    def test_lowest_rated_product_line_shown(self):
+        body = HEADER
+        for number in range(1, 6):
+            body += row(review_id="R-%d" % number, product="P-9",
+                        name="Bad Kettle", rating="1",
+                        email="user%d@example.com" % number,
+                        text="Broke on day one, leaked everywhere "
+                             "%d." % number,
+                        replied="yes")
+        body += row(review_id="R-6", product="P-8", name="Good Mug",
+                    rating="5", email="other@example.com",
+                    replied="yes")
+        path = write_csv(body)
+        try:
+            code, text = run_cli([path, "--as-of", "2026-11-18"])
+            _, json_text = run_cli([path, "--as-of", "2026-11-18",
+                                    "--json"])
+        finally:
+            os.unlink(path)
+        self.assertEqual(code, 0)
+        self.assertIn("Lowest rated product with at least 5 reviews: "
+                      "P-9 Bad Kettle, avg 1.00 from 5 reviews\n", text)
+        report = json.loads(json_text)
+        self.assertNotIn("lowest_rated_product", report)
+        self.assertNotIn("Lowest rated product", json_text)
+
+    def test_lowest_rated_product_line_absent_for_sample(self):
+        base = os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__)))
+        path = os.path.join(base, "examples", "reviews.csv")
+        code, text = run_cli([path, "--as-of", "2026-11-18"])
+        self.assertEqual(code, 0)
+        self.assertNotIn("Lowest rated product", text)
+
+    def test_lowest_rated_product_follows_min_reviews(self):
+        base = os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__)))
+        path = os.path.join(base, "examples", "reviews.csv")
+        code, text = run_cli([path, "--as-of", "2026-11-18",
+                              "--min-reviews", "3"])
+        self.assertEqual(code, 0)
+        self.assertIn("Lowest rated product with at least 3 reviews: "
+                      "P-203 Linen Cushion Cover, avg 1.00 from 3 "
+                      "reviews\n", text)
+
+    def test_json_keys_unchanged(self):
+        base = os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__)))
+        path = os.path.join(base, "examples", "clean.csv")
+        code, text = run_cli([path, "--as-of", "2026-11-18", "--json"])
+        self.assertEqual(code, 0)
+        self.assertEqual(sorted(json.loads(text)), sorted([
+            "reviews", "findings", "errors", "warnings",
+            "average_rating", "unreplied_negatives",
+            "overdue_unreplied_negatives",
+            "pending_moderation_overdue", "fake_pattern_findings",
+            "products_with_few_reviews", "per_product"]))
 
     def test_bad_reply_days(self):
         code, _ = run_cli(["examples/clean.csv", "--reply-days", "-1"])

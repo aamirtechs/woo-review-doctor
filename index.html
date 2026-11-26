@@ -427,7 +427,16 @@ function summarizeReviews(reviews, findings) {
     perProduct: perProduct
   };
 }
-function formatText(findings, summary) {
+function lowestRatedProduct(perProduct, minReviews) {
+  var lowest = null;
+  perProduct.forEach(function (row) {
+    var d = row.distribution;
+    if (row.reviews < minReviews || d["1"] + d["2"] + d["3"] + d["4"] + d["5"] === 0) return;
+    if (lowest === null || row.averageRating < lowest.averageRating) lowest = row;
+  });
+  return lowest;
+}
+function formatText(findings, summary, minReviews) {
   var lines = findings.map(findingStr);
   lines.push("");
   lines.push("Reviews: " + summary.reviews + ", findings: " + summary.findings +
@@ -438,6 +447,12 @@ function formatText(findings, summary) {
     summary.pendingModerationOverdue);
   lines.push("Fake-review pattern findings: " + summary.fakePatternFindings +
     ", products with too few reviews: " + summary.productsWithFewReviews);
+  var lowest = lowestRatedProduct(summary.perProduct, minReviews);
+  if (lowest !== null) {
+    lines.push("Lowest rated product with at least " + minReviews + " reviews: " +
+      lowest.productId + " " + (lowest.productName || "(no name)") + ", avg " +
+      fmtF(lowest.averageRating, 2) + " from " + lowest.reviews + " reviews");
+  }
   lines.push("");
   lines.push("Per-product rating summary:");
   summary.perProduct.forEach(function (row) {
@@ -470,7 +485,7 @@ window.runTool = function (inputText, options) {
   catch (e) { return "ERROR: " + e.message + "\n"; }
   var findings = parsed.findings.concat(auditReviews(parsed.reviews, asOf, replyDays, minReviews));
   var summary = summarizeReviews(parsed.reviews, findings);
-  return formatText(findings, summary);
+  return formatText(findings, summary, minReviews);
 };
 </script>
 <script>
